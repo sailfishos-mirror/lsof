@@ -12,6 +12,12 @@ fi
 ux=/tmp/$name-$$.sock
 nc -l -U $ux > /dev/null < /dev/zero &
 server=$!
+sleep 1
+
+if ! kill -0 $server 2>/dev/null; then
+    echo "Maybe netcat version is not supported, nmap-ncat required" >> $report
+    exit 2
+fi
 
 killBoth()
 {

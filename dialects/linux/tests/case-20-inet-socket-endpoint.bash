@@ -10,6 +10,11 @@ sleep 1
 nc -4 -s 127.0.0.2 -p 9999 127.0.0.1 10000 < /dev/zero  > /dev/null &
 client=$!
 
+if ! kill -0 $server 2>/dev/null; then
+    echo "Maybe netcat version is not supported, nmap-ncat required" >> $report
+    exit 2
+fi
+
 sleep 1
 
 killBoth()
