@@ -209,6 +209,21 @@ struct llock {
     struct llock *next;
 };
 
+#    if defined(HASMNTSUP)
+typedef struct mntsup {
+    char *dir_name;      /* mounted directory name */
+    size_t dir_name_len; /* strlen(dir_name) */
+    dev_t dev;           /* device number */
+    int ln;              /* line on which defined */
+    struct mntsup *next; /* next entry */
+} mntsup_t;
+
+#        define HASHMNT                                                        \
+            128 /* mount supplement hash bucket count                          \
+                 * !!!MUST BE A POWER OF 2!!! */
+
+#    endif /* defined(HASMNTSUP) */
+
 struct lsof_context_dialect {
     /* dnode.c - lock hash table */
     struct llock **lock_hash;
@@ -238,6 +253,10 @@ struct lsof_context_dialect {
     /* dproc.c - /proc/FD temp buffer */
     char *temp_path_buf;
     int temp_path_buf_sz;
+#    if defined(HASMNTSUP)
+    mntsup_t **mntsup_hash; /* mount supplement
+                             * hash buckets */
+#    endif                  /* defined(HASMNTSUP) */
 };
 
 /* Dialect-specific cleanup function */
@@ -277,5 +296,8 @@ void lsof_dialect_destroy(struct lsof_context *ctx);
 /* /proc/FD temp path buffer macros */
 #    define Path (ctx->dialect.temp_path_buf)
 #    define Pathl (ctx->dialect.temp_path_buf_sz)
+
+/* mount supplement hash buckets */
+#    define MSHash (ctx->dialect.mntsup_hash)
 
 #endif /* LINUX_LSOF_H	*/

@@ -115,4 +115,17 @@ void lsof_dialect_destroy(struct lsof_context *ctx) {
         CLEAN(Path);
         Pathl = 0;
     }
+#if defined(HASMNTSUP)
+    if (MSHash) {
+        for (int h = 0; h < HASHMNT; h++) {
+            mntsup_t *mp, *mpn;
+            for (mp = MSHash[h]; mp; mp = mpn) {
+                mpn = mp->next;
+                CLEAN(mp->dir_name);
+                CLEAN(mp);
+            }
+        }
+        CLEAN(MSHash);
+    }
+#endif
 }

@@ -34,12 +34,6 @@
  * Local definitions
  */
 
-#if defined(HASMNTSUP)
-#    define HASHMNT                                                            \
-        128 /* mount supplement hash bucket count                              \
-             * !!!MUST BE A POWER OF 2!!! */
-#endif      /* defined(HASMNTSUP) */
-
 /*
  * Local function prototypes
  */
@@ -56,22 +50,9 @@ static int hash_mnt(char *dir_name);
  * Local structure definitions.
  */
 
-#if defined(HASMNTSUP)
-typedef struct mntsup {
-    char *dir_name;      /* mounted directory name */
-    size_t dir_name_len; /* strlen(dir_name) */
-    dev_t dev;           /* device number */
-    int ln;              /* line on which defined */
-    struct mntsup *next; /* next entry */
-} mntsup_t;
-#endif /* defined(HASMNTSUP) */
-
 /*
  * Local static definitions
  */
-
-static mntsup_t **MSHash = (mntsup_t **)NULL; /* mount supplement
-                                               * hash buckets */
 
 /*
  * convert_octal_escaped() -- convert octal-escaped characters in string
