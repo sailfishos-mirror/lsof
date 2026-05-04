@@ -1666,120 +1666,109 @@ static int read_id_stat(struct lsof_context *ctx, /* context */
                         int *pgid) /* returned process group ID for PID
                                     * type */
 {
-    char buf[MAXPATHLEN], *cp, *cp1, **fp;
-    int ch, cx, es, pc;
+    char *cp, *cp1, *cp2, **fp;
+    int len = 0, n;
     char *cbf = (char *)NULL;
-    MALLOC_S cbfa = 0;
+    int cbfa = 0;
     FILE *fs;
+    int ret = 0;
     /*
      * Open the stat file path, assign a page size buffer to its stream,
-     * and read the file's first line.
+     * and read the entire file.
      */
     if (!(fs = open_proc_stream(ctx, p, "r", 0)))
         return (-1);
-    if (!(cp = fgets(buf, sizeof(buf), fs))) {
-
-    read_id_stat_exit:
-
-        CLEAN(cbf);
-        (void)fclose(fs);
-        return (-1);
+    for (;;) {
+        if (len + 1 >= cbfa) {
+            if (grow_array((void **)&cbf, &cbfa, sizeof(char), 256) != 0)
+                goto read_id_stat_exit;
+        }
+        n = fread(cbf + len, 1, cbfa - len - 1, fs);
+        if (n == 0) {
+            if (ferror(fs))
+                goto read_id_stat_exit;
+            break;
+        }
+        len += n;
     }
+    if (!cbf || !*cbf)
+        goto read_id_stat_exit;
+    cbf[len] = '\0';
+    (void)fclose(fs);
+    fs = NULL;
     /*
      * Skip to the first field, and make sure it is a matching ID.
      */
-    cp1 = cp;
+    cp = cbf;
     while (*cp && (*cp != ' ') && (*cp != '\t'))
         cp++;
     if (*cp)
         *cp = '\0';
-    if (atoi(cp1) != id)
+    if (atoi(cbf) != id)
         goto read_id_stat_exit;
     /*
      * The second field should contain the command, enclosed in parentheses.
-     * If it also has embedded '\n' characters, replace them with '?'
-     * characters, accumulating command characters until a closing parentheses
-     * appears.
-     *
+     * Find the first '(' and the last ')' in the file.  The string between
+     * them is the command name; the rest after the last ')' are the
+     * remaining fields.
      */
     for (++cp; *cp && (*cp == ' '); cp++)
         ;
     if (!cp || (*cp != '('))
         goto read_id_stat_exit;
-    cp++;
-    pc = 1; /* start the parenthesis balance count at 1 */
-
+    cp1 = ++cp;
+    cp2 = strrchr(cp, ')');
+    if (!cp2)
+        goto read_id_stat_exit;
     /*
-     * Enter the command characters safely.  Supply them from the initial read
-     * of the stat file line, a '\n' if the initial read didn't yield a ')'
-     * command closure, or by reading the rest of the command a character at
-     * a time from the stat file.  Count embedded '(' characters and balance
-     * them with embedded ')' characters.  The opening '(' starts the balance
-     * count at one.
+     * Replace embedded newlines in the command with '?'.
      */
-    for (cx = es = 0;;) {
-        if (!es)
-            ch = *cp++;
-        else {
-            if ((ch = fgetc(fs)) == EOF)
-                goto read_id_stat_exit;
-        }
-        if (ch == '(') /* a '(' advances the balance count */
-            pc++;
-        if (ch == ')') {
-
-            /*
-             * Balance parentheses when a closure is encountered.  When
-             * they are balanced, this is the end of the command.
-             */
-            pc--;
-            if (!pc)
-                break;
-        }
-        if ((cx + 2) > cbfa)
-            cbfa = alloc_cbf(ctx, (cx + 2), &cbf, cbfa);
-        cbf[cx] = ch;
-        cx++;
-        cbf[cx] = '\0';
-        if (!es && !*cp)
-            es = 1; /* Switch to fgetc() when a '\0' appears. */
+    for (cp = cp1; cp < cp2; cp++) {
+        if (*cp == '\n')
+            *cp = '?';
     }
-    *cmd = cbf;
-    cbf = NULL;
+    *cp2 = '\0';
+    *cmd = mkstrcpy(cp1, NULL);
+    if (!*cmd)
+        goto read_id_stat_exit;
     /*
-     * Read the remainder of the stat line if it was necessary to read command
-     * characters individually from the stat file.
-     *
-     * Separate the reminder into fields.
+     * Separate the remainder into fields.
      */
-    if (es)
-        cp = fgets(buf, sizeof(buf), fs);
-    (void)fclose(fs);
+    cp = cp2 + 1;
+    while (*cp && (*cp == ' '))
+        cp++;
     if (!cp || !*cp)
-        return (-1);
+        goto read_id_stat_exit;
     if (get_fields(ctx, cp, (char *)NULL, &fp, (int *)NULL, 0) < 3)
-        return (-1);
+        goto read_id_stat_exit;
     /*
-     * Convert and return parent process (fourth field) and process group (fifth
-     * field) IDs.
+     * Convert and return parent process (fourth field) and process group
+     * (fifth field) IDs.
      */
     if (fp[1] && *fp[1])
         *ppid = atoi(fp[1]);
     else
-        return (-1);
+        goto read_id_stat_exit;
     if (fp[2] && *fp[2])
         *pgid = atoi(fp[2]);
     else
-        return (-1);
+        goto read_id_stat_exit;
     /*
      * Check the state in the third field.  If it is 'Z', return that
      * indication.
      */
     if (fp[0] && !strcmp(fp[0], "Z"))
-        return (1);
+        ret = 1;
     else if (fp[0] && !strcmp(fp[0], "T"))
-        return (2);
-    return (0);
+        ret = 2;
+    CLEAN(cbf);
+    return ret;
+
+read_id_stat_exit:
+    CLEAN(cbf);
+    if (fs)
+        (void)fclose(fs);
+    return (-1);
 }
 
 /*

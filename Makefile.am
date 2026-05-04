@@ -164,7 +164,8 @@ LINUX_TESTS = lib/dialects/linux/tests/case-10-mqueue.bash \
 	lib/dialects/linux/tests/case-20-pipe-no-close-endpoint.bash \
 	lib/dialects/linux/tests/case-20-pty-endpoint.bash \
 	lib/dialects/linux/tests/case-20-ux-socket-endpoint.bash \
-	lib/dialects/linux/tests/case-20-ux-socket-endpoint-unaccepted.bash
+	lib/dialects/linux/tests/case-20-ux-socket-endpoint-unaccepted.bash \
+	lib/dialects/linux/tests/case-20-unbal-parens.bash
 EXTRA_DIST += $(LINUX_TESTS) lib/dialects/linux/tests/Makefile lib/dialects/linux/tests/case-00-linux-hello.bash
 if LINUX
 check_PROGRAMS += lib/dialects/linux/tests/epoll \
@@ -176,7 +177,8 @@ check_PROGRAMS += lib/dialects/linux/tests/epoll \
 	lib/dialects/linux/tests/pidfd \
 	lib/dialects/linux/tests/pipe \
 	lib/dialects/linux/tests/pty \
-	lib/dialects/linux/tests/ux
+	lib/dialects/linux/tests/ux \
+	lib/dialects/linux/tests/unbal_parens
 lib_dialects_linux_tests_mq_fork_LDADD = -lrt
 lib_dialects_linux_tests_mq_open_LDADD = -lrt
 

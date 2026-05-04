@@ -8,6 +8,7 @@ HELPERS = \
 	pty \
 	ux \
 	mmap \
+	unbal_parens \
 	\
 	open_with_flags \
 	\
